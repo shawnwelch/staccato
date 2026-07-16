@@ -1,9 +1,10 @@
 """Pure scoring math: pacing score + heat map.
 
 Nothing here touches video files or the network — inputs are cut timestamps
-and durations, outputs are numbers. The Swift port in asl-apple must match
-this bit-for-bit at the same ENGINE_VERSION; both are pinned by the shared
-golden vectors in fixtures/golden_vectors.json.
+and durations, outputs are numbers. The Swift port in the staccato-apple repo
+(github.com/shawnwelch/staccato-apple, PacingKit) must match this bit-for-bit
+at the same ENGINE_VERSION; both are pinned by the shared golden vectors in
+fixtures/golden_vectors.json.
 """
 
 from __future__ import annotations

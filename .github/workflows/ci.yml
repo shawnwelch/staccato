@@ -55,13 +55,3 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
-
-  pacingkit:
-    # Pure-Swift engine port; runs on Linux, no Xcode needed.
-    runs-on: ubuntu-latest
-    container: swift:6.0
-    steps:
-      - uses: actions/checkout@v4
-      - name: PacingKit golden-vector tests
-        working-directory: asl-apple/PacingKit
-        run: swift test

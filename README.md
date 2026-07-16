@@ -12,7 +12,7 @@ does to anyone.
 | Directory | What it is | Stack |
 |---|---|---|
 | [`asl-backend/`](asl-backend/) | API + workers + the scoring engine | Python 3.12, FastAPI, SQLAlchemy 2, Procrastinate, PySceneDetect |
-| [`asl-apple/`](asl-apple/) | iOS app (flagship surface) | SwiftUI, iOS 26 SDK, Swift 6, StoreKit 2 |
+| [`staccato-apple`](https://github.com/shawnwelch/staccato-apple) | iOS app (flagship surface) — separate repo | SwiftUI, iOS 26 SDK, Swift 6, StoreKit 2 |
 | [`asl-frontend/`](asl-frontend/) | Public web: share pages, channels, leaderboard | Next.js 15 (App Router), TypeScript |
 | [`asl-admin/`](asl-admin/) | Internal ops: jobs, moderation, engine rollout | Next.js 15 (App Router), TypeScript |
 | [`fixtures/`](fixtures/) | Shared golden test vectors pinning the engine math | JSON |
@@ -32,8 +32,10 @@ ContentDetector), `build_heatmap` (centered rolling window → cuts/min), and
 1.5s → ~93. The formula is product surface area: every stored score carries
 `engine_version` (currently **1.0.0**), and scores are never silently
 rescored. `fixtures/golden_vectors.json` pins the math bit-for-bit across the
-Python engine and the Swift port (`asl-apple/PacingKit`); both test suites
-consume the same file.
+Python engine and the Swift port (`PacingKit`), which now lives in
+[shawnwelch/staccato-apple](https://github.com/shawnwelch/staccato-apple) but
+is still pinned by this same fixture: both test suites consume byte-identical
+copies of `fixtures/golden_vectors.json`.
 
 ## Product rules that shape the code
 
@@ -60,7 +62,7 @@ uv pip install -e '.[dev]' && pytest -m "not slow" && uvicorn asl_backend.main:a
 cd asl-frontend && npm install && npm run dev        # :3000
 cd asl-admin && npm install && npm run dev           # :3100
 
-# iOS: see asl-apple/README.md (XcodeGen; PacingKit tests run with `swift test`)
+# iOS: see https://github.com/shawnwelch/staccato-apple (XcodeGen; PacingKit tests run with `swift test`)
 ```
 
 ## Build order / status

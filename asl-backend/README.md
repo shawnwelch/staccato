@@ -24,7 +24,9 @@ tests/             golden vectors, synthetic-clip e2e, entitlement races, inline
   `_PIVOT_SECONDS`, `_STEEPNESS`, or the median basis is a version bump and a
   deliberate re-score rollout (see `/admin/rescore`), never a silent change.
 - `../fixtures/golden_vectors.json` pins the math; the Swift port in
-  `asl-apple` runs the same vectors. Regenerate only on a version bump.
+  [staccato-apple](https://github.com/shawnwelch/staccato-apple) runs the
+  same vectors from byte-identical copies. Regenerate only on a version bump,
+  and copy the regenerated file into staccato-apple in the same change.
 
 ## Run it
 

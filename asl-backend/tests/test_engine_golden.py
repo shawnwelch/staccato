@@ -1,6 +1,6 @@
 """Golden-vector tests: the engine must match fixtures/golden_vectors.json
-exactly. The Swift port in asl-apple runs the same vectors — this is the
-bit-for-bit cross-repo parity contract."""
+exactly. The Swift port in the staccato-apple repo runs the same vectors —
+this is the bit-for-bit cross-repo parity contract."""
 
 from __future__ import annotations
 
