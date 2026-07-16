@@ -12,6 +12,8 @@ import base64
 import json
 import logging
 from datetime import UTC, datetime
+from functools import lru_cache
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -55,14 +57,15 @@ def _decode_jws_payload(jws: str) -> dict:
     """Decode a JWS payload.
 
     When ASL_APPLE_VERIFY_SIGNATURES is true (production), the x5c certificate
-    chain is verified against Apple's root CA before trusting the payload.
-    Dev/test skips verification for locally-forged fixtures.
+    chain is validated to a pinned Apple root CA (ASL_APPLE_ROOT_CA_DIR) and
+    the JWS signature is checked against the leaf, before trusting the
+    payload. Dev/test skips verification for locally-forged fixtures.
     """
     settings = get_settings()
     try:
         header_b64, payload_b64, _sig = jws.split(".")
         if settings.apple_verify_signatures:
-            _verify_x5c_chain(jws, header_b64)
+            _verify_x5c_chain(jws, header_b64, settings.apple_root_ca_dir)
         padded = payload_b64 + "=" * (-len(payload_b64) % 4)
         return json.loads(base64.urlsafe_b64decode(padded))
     except HTTPException:
@@ -71,21 +74,93 @@ def _decode_jws_payload(jws: str) -> dict:
         raise HTTPException(status_code=400, detail="malformed signed payload") from exc
 
 
-def _verify_x5c_chain(jws: str, header_b64: str) -> None:
+@lru_cache(maxsize=4)
+def _load_pinned_roots(root_ca_dir: str) -> frozenset[bytes]:
+    """Pinned trust anchors as DER bytes (Apple Root CA G2/G3, downloaded from
+    https://www.apple.com/certificateauthority/ and deployed read-only)."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives.serialization import Encoding
+
+    roots: set[bytes] = set()
+    for path in sorted(Path(root_ca_dir).glob("*")):
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        try:
+            cert = x509.load_pem_x509_certificate(data)
+        except ValueError:
+            cert = x509.load_der_x509_certificate(data)
+        roots.add(cert.public_bytes(Encoding.DER))
+    return frozenset(roots)
+
+
+def _verify_signed_by(cert, issuer) -> None:
+    from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+
+    public_key = issuer.public_key()
+    if isinstance(public_key, ec.EllipticCurvePublicKey):
+        public_key.verify(
+            cert.signature, cert.tbs_certificate_bytes, ec.ECDSA(cert.signature_hash_algorithm)
+        )
+    elif isinstance(public_key, rsa.RSAPublicKey):
+        public_key.verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            padding.PKCS1v15(),
+            cert.signature_hash_algorithm,
+        )
+    else:
+        raise ValueError("unsupported issuer key type")
+
+
+def _verify_x5c_chain(jws: str, header_b64: str, root_ca_dir: str) -> None:
+    """Validate the header's certificate chain to a pinned Apple root, then
+    verify the JWS against the leaf.
+
+    The x5c chain is attacker-supplied, so the leaf is only trusted after
+    every link's signature verifies and the terminal certificate is
+    byte-identical to a pinned root. Fails closed if no roots are configured.
+    """
     import jwt as pyjwt
     from cryptography import x509
+    from cryptography.hazmat.primitives.serialization import Encoding
+
+    if not root_ca_dir:
+        raise HTTPException(
+            status_code=503,
+            detail="apple notification verification is enabled but no root CAs are configured",
+        )
+    pinned = _load_pinned_roots(root_ca_dir)
+    if not pinned:
+        raise HTTPException(status_code=503, detail="apple root CA directory is empty")
 
     padded = header_b64 + "=" * (-len(header_b64) % 4)
     header = json.loads(base64.urlsafe_b64decode(padded))
     x5c = header.get("x5c") or []
     if not x5c:
         raise HTTPException(status_code=400, detail="missing certificate chain")
-    leaf = x509.load_der_x509_certificate(base64.b64decode(x5c[0]))
-    # TODO(prod-hardening): validate the full chain to Apple's root CA and
-    # check revocation. Verifying the JWS against the leaf key catches
-    # malformed/tampered payloads.
     try:
-        pyjwt.decode(jws, key=leaf.public_key(), algorithms=["ES256"], options={"verify_aud": False})
+        chain = [x509.load_der_x509_certificate(base64.b64decode(c)) for c in x5c]
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="malformed certificate chain") from exc
+
+    now = datetime.now(UTC)
+    for cert in chain:
+        if not (cert.not_valid_before_utc <= now <= cert.not_valid_after_utc):
+            raise HTTPException(status_code=400, detail="certificate outside validity window")
+    try:
+        for cert, issuer in zip(chain, chain[1:]):
+            _verify_signed_by(cert, issuer)
+    except Exception as exc:  # noqa: BLE001 — any crypto failure is a rejection
+        raise HTTPException(status_code=400, detail="certificate chain verification failed") from exc
+
+    if chain[-1].public_bytes(Encoding.DER) not in pinned:
+        raise HTTPException(status_code=400, detail="certificate chain does not terminate at a pinned root")
+
+    try:
+        pyjwt.decode(
+            jws, key=chain[0].public_key(), algorithms=["ES256"], options={"verify_aud": False}
+        )
     except pyjwt.PyJWTError as exc:
         raise HTTPException(status_code=400, detail="invalid payload signature") from exc
 

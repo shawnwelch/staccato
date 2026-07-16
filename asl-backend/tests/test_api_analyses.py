@@ -135,3 +135,44 @@ async def test_get_analysis_status(client, auth_headers):
 
     resp = await client.get("/v1/analyses/nope", headers=auth_headers)
     assert resp.status_code == 404
+
+
+async def test_in_flight_analysis_hidden_from_other_users(client, auth_headers):
+    created = await client.post(
+        "/v1/analyses", json={"url": "https://youtu.be/fffffffffff"}, headers=auth_headers
+    )
+    analysis_id = created.json()["analysis"]["id"]
+
+    # Another authenticated user can't read someone else's queued analysis...
+    other = {"Authorization": "Bearer dev:user_test_2"}
+    resp = await client.get(f"/v1/analyses/{analysis_id}", headers=other)
+    assert resp.status_code == 404
+    # ...but the requester still can.
+    resp = await client.get(f"/v1/analyses/{analysis_id}", headers=auth_headers)
+    assert resp.status_code == 200
+
+
+async def test_completed_analysis_readable_by_any_user(client, auth_headers):
+    """Completed analyses are public share-page data and are served to other
+    users via dedupe, so any authenticated user may read them."""
+    async with db_module.get_sessionmaker()() as session:
+        video = Video(provider="youtube", provider_video_id="ggggggggggg")
+        session.add(video)
+        await session.flush()
+        analysis = Analysis(
+            video_id=video.id,
+            requested_by=None,
+            status=AnalysisStatus.complete,
+            source="url",
+            engine_version=ENGINE_VERSION,
+            score=50.0,
+            label="fast",
+        )
+        session.add(analysis)
+        await session.commit()
+        analysis_id = analysis.id
+
+    resp = await client.get(
+        f"/v1/analyses/{analysis_id}", headers={"Authorization": "Bearer dev:user_test_3"}
+    )
+    assert resp.status_code == 200

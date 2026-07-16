@@ -147,6 +147,11 @@ async def get_analysis(
     analysis = await session.get(Analysis, analysis_id)
     if analysis is None:
         raise HTTPException(status_code=404, detail="analysis not found")
+    # Completed analyses are public data (they're served on share pages and
+    # returned to other users via dedupe). In-flight and failed rows are only
+    # visible to whoever requested them — 404, not 403, so ids don't leak.
+    if analysis.status != AnalysisStatus.complete and analysis.requested_by != identity.user_id:
+        raise HTTPException(status_code=404, detail="analysis not found")
     video = await session.get(Video, analysis.video_id) if analysis.video_id else None
     share = await session.scalar(select(SharePage).where(SharePage.analysis_id == analysis.id))
     return AnalysisStatusResponse(
