@@ -53,6 +53,8 @@ class QuotaExhausted(HTTPException):
                 "message": "Free analyses used up. Subscribe for unlimited scans.",
                 "free_remaining": 0,
             },
+            # The iOS client renders the remaining count from this header.
+            headers={"X-Scans-Remaining": "0"},
         )
 
 

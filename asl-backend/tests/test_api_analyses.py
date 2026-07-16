@@ -114,6 +114,14 @@ async def test_free_quota_enforced_server_side(client, auth_headers):
     )
     assert resp.status_code == 402
     assert resp.json()["detail"]["code"] == "free_quota_exhausted"
+    assert resp.headers["x-scans-remaining"] == "0"
+
+
+async def test_quota_header_on_create(client, auth_headers):
+    resp = await client.post(
+        "/v1/analyses", json={"url": "https://youtu.be/hhhhhhhhhhh"}, headers=auth_headers
+    )
+    assert resp.headers["x-scans-remaining"] == "2"
 
 
 async def test_get_analysis_status(client, auth_headers):

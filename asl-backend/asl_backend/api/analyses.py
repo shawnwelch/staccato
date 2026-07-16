@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,9 +39,17 @@ def _entitlement_out(e: EntitlementInfo, consumed: bool = False) -> EntitlementO
     )
 
 
+def _set_quota_header(response: Response, entitlement_out: EntitlementOut) -> None:
+    # iOS renders the remaining free-scan count from this header; pros get -1
+    # ("unlimited") so the client never shows a counter.
+    remaining = -1 if entitlement_out.plan == "pro" else entitlement_out.free_remaining
+    response.headers["X-Scans-Remaining"] = str(remaining)
+
+
 @router.post("", status_code=202, response_model=AnalysisCreateResponse)
 async def create_analysis(
     body: AnalysisCreateRequest,
+    response: Response,
     identity: Identity = Depends(require_identity),
     entitlement: EntitlementInfo = Depends(get_entitlement),
     session: AsyncSession = Depends(get_session),
@@ -74,12 +82,14 @@ async def create_analysis(
             share = await session.scalar(
                 select(SharePage).where(SharePage.analysis_id == existing.id)
             )
+            ent_out = _entitlement_out(entitlement)
+            _set_quota_header(response, ent_out)
             return AnalysisCreateResponse(
                 analysis=analysis_out(existing),
                 video=video_out(video),
                 share_slug=share.slug if share else None,
                 deduped=True,
-                entitlement=_entitlement_out(entitlement),
+                entitlement=ent_out,
             )
 
     # Consume a free credit (row-locked) unless pro; same transaction as the
@@ -117,12 +127,14 @@ async def create_analysis(
         await session.commit()
         raise HTTPException(status_code=503, detail="queue unavailable, try again")
 
+    ent_out = _entitlement_out(entitlement, consumed=True)
+    _set_quota_header(response, ent_out)
     return AnalysisCreateResponse(
         analysis=analysis_out(analysis),
         video=video_out(video),
         share_slug=None,
         deduped=False,
-        entitlement=_entitlement_out(entitlement, consumed=True),
+        entitlement=ent_out,
     )
 
 
