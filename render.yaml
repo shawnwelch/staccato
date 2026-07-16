@@ -1,0 +1,87 @@
+# Render blueprint for the Staccato stack.
+# External: Neon (Postgres), Clerk (auth), Cloudflare R2 (object storage).
+# Set the sync:false env vars in the Render dashboard.
+
+services:
+  - type: web
+    name: staccato-backend
+    runtime: python
+    rootDir: staccato-backend
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: uvicorn staccato_backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars: &backend-env
+      - key: STACCATO_ENV
+        value: prod
+      - key: STACCATO_DATABASE_URL # Neon: postgresql+asyncpg://...
+        sync: false
+      - key: STACCATO_PROCRASTINATE_DATABASE_URL # Neon: postgresql://...
+        sync: false
+      - key: STACCATO_AUTH_MODE
+        value: clerk
+      - key: STACCATO_CLERK_JWKS_URL
+        sync: false
+      - key: STACCATO_CLERK_ISSUER
+        sync: false
+      - key: STACCATO_ADMIN_API_TOKEN
+        generateValue: true
+      - key: STACCATO_STORAGE_BACKEND
+        value: r2
+      - key: STACCATO_PUBLIC_MEDIA_BASE_URL # R2 public bucket / custom domain
+        sync: false
+      - key: STACCATO_R2_ENDPOINT_URL
+        sync: false
+      - key: STACCATO_R2_BUCKET
+        value: staccato-artifacts
+      - key: STACCATO_R2_ACCESS_KEY_ID
+        sync: false
+      - key: STACCATO_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: STACCATO_SHARE_BASE_URL
+        sync: false
+      - key: STACCATO_YOUTUBE_API_KEY
+        sync: false
+
+  - type: worker
+    name: staccato-worker
+    runtime: python
+    rootDir: staccato-backend
+    # First deploy: run `procrastinate --app=staccato_backend.jobs.app schema --apply` once.
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: procrastinate --app=staccato_backend.jobs.app worker --queues=interactive,batch --concurrency=2
+    envVars: *backend-env
+
+  - type: cron
+    name: staccato-channel-rescan
+    runtime: python
+    rootDir: staccato-backend
+    schedule: "0 6 * * 1" # weekly channel re-scans, Monday 06:00 UTC
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: python -m staccato_backend.cron
+    envVars: *backend-env
+
+  - type: web
+    name: staccato-frontend
+    runtime: node
+    rootDir: staccato-frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: BACKEND_URL
+        sync: false
+
+  - type: web
+    name: staccato-admin
+    runtime: node
+    rootDir: staccato-admin
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: BACKEND_URL
+        sync: false
+      - key: ADMIN_API_TOKEN # must match staccato-backend's STACCATO_ADMIN_API_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
