@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # https://www.apple.com/certificateauthority/. Verification fails closed
     # (503) if enabled without roots configured.
     apple_root_ca_dir: str = ""
-    apple_bundle_id: str = "com.onesilo.asl"
+    apple_bundle_id: str = "com.anythingsimple.staccato"
 
     yt_dlp_format: str = "worst[height>=240][ext=mp4]/worst[ext=mp4]/worst"
 
