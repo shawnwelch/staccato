@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: asl-backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: asl
+          POSTGRES_PASSWORD: asl
+          POSTGRES_DB: asl_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U asl" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install uv
+          uv pip install --system -e '.[dev]'
+      - name: Fast tests (golden vectors, API, entitlements)
+        run: pytest -m "not slow" -q
+      - name: Slow tests (synthetic clips, inline pipeline)
+        run: pytest -m slow -q
+      - name: Entitlement row-lock race (Postgres)
+        env:
+          ASL_TEST_PG_DSN: postgresql+asyncpg://asl:asl@localhost:5432/asl_test
+        run: pytest tests/test_entitlements_concurrency.py -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [asl-frontend, asl-admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build

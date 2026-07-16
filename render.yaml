@@ -1,0 +1,87 @@
+# Render blueprint for the ASL stack.
+# External: Neon (Postgres), Clerk (auth), Cloudflare R2 (object storage).
+# Set the sync:false env vars in the Render dashboard.
+
+services:
+  - type: web
+    name: asl-backend
+    runtime: python
+    rootDir: asl-backend
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: uvicorn asl_backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars: &backend-env
+      - key: ASL_ENV
+        value: prod
+      - key: ASL_DATABASE_URL # Neon: postgresql+asyncpg://...
+        sync: false
+      - key: ASL_PROCRASTINATE_DATABASE_URL # Neon: postgresql://...
+        sync: false
+      - key: ASL_AUTH_MODE
+        value: clerk
+      - key: ASL_CLERK_JWKS_URL
+        sync: false
+      - key: ASL_CLERK_ISSUER
+        sync: false
+      - key: ASL_ADMIN_API_TOKEN
+        generateValue: true
+      - key: ASL_STORAGE_BACKEND
+        value: r2
+      - key: ASL_PUBLIC_MEDIA_BASE_URL # R2 public bucket / custom domain
+        sync: false
+      - key: ASL_R2_ENDPOINT_URL
+        sync: false
+      - key: ASL_R2_BUCKET
+        value: asl-artifacts
+      - key: ASL_R2_ACCESS_KEY_ID
+        sync: false
+      - key: ASL_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: ASL_SHARE_BASE_URL
+        sync: false
+      - key: ASL_YOUTUBE_API_KEY
+        sync: false
+
+  - type: worker
+    name: asl-worker
+    runtime: python
+    rootDir: asl-backend
+    # First deploy: run `procrastinate --app=asl_backend.jobs.app schema --apply` once.
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: procrastinate --app=asl_backend.jobs.app worker --queues=interactive,batch --concurrency=2
+    envVars: *backend-env
+
+  - type: cron
+    name: asl-channel-rescan
+    runtime: python
+    rootDir: asl-backend
+    schedule: "0 6 * * 1" # weekly channel re-scans, Monday 06:00 UTC
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: python -m asl_backend.cron
+    envVars: *backend-env
+
+  - type: web
+    name: asl-frontend
+    runtime: node
+    rootDir: asl-frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: BACKEND_URL
+        sync: false
+
+  - type: web
+    name: asl-admin
+    runtime: node
+    rootDir: asl-admin
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: BACKEND_URL
+        sync: false
+      - key: ADMIN_API_TOKEN # must match asl-backend's ASL_ADMIN_API_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
