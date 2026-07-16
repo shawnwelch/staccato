@@ -1,6 +1,6 @@
 # staccato
 
-Monorepo for **ASL** (working name) — a pacing scorer for video: paste a URL
+Monorepo for **Staccato** — a pacing scorer for video: paste a URL
 (or point a phone camera at a screen) and get a 0–100 **pacing intensity
 score** plus a timeline heat map of cut density. A light meter for video
 pacing: it reports what it measures, with neutral labels
@@ -11,10 +11,10 @@ does to anyone.
 
 | Directory | What it is | Stack |
 |---|---|---|
-| [`asl-backend/`](asl-backend/) | API + workers + the scoring engine | Python 3.12, FastAPI, SQLAlchemy 2, Procrastinate, PySceneDetect |
+| [`staccato-backend/`](staccato-backend/) | API + workers + the scoring engine | Python 3.12, FastAPI, SQLAlchemy 2, Procrastinate, PySceneDetect |
 | [`staccato-apple`](https://github.com/shawnwelch/staccato-apple) | iOS app (flagship surface) — separate repo | SwiftUI, iOS 26 SDK, Swift 6, StoreKit 2 |
-| [`asl-frontend/`](asl-frontend/) | Public web: share pages, channels, leaderboard | Next.js 15 (App Router), TypeScript |
-| [`asl-admin/`](asl-admin/) | Internal ops: jobs, moderation, engine rollout | Next.js 15 (App Router), TypeScript |
+| [`staccato-frontend/`](staccato-frontend/) | Public web: share pages, channels, leaderboard | Next.js 15 (App Router), TypeScript |
+| [`staccato-admin/`](staccato-admin/) | Internal ops: jobs, moderation, engine rollout | Next.js 15 (App Router), TypeScript |
 | [`fixtures/`](fixtures/) | Shared golden test vectors pinning the engine math | JSON |
 
 Shared infrastructure: **Clerk** (auth, all surfaces), **Neon** Postgres
@@ -24,7 +24,7 @@ JSON; S3-compatible via boto3). See `render.yaml`.
 
 ## The engine, in one paragraph
 
-`asl-backend/asl_backend/engine/` is a dependency-light module (open-core;
+`staccato-backend/staccato_backend/engine/` is a dependency-light module (open-core;
 no imports from app code) with three primitives: `detect_cuts` (PySceneDetect
 ContentDetector), `build_heatmap` (centered rolling window → cuts/min), and
 `pacing_score` — a logistic curve on **median** shot length:
@@ -47,7 +47,7 @@ copies of `fixtures/golden_vectors.json`.
   column, so Stripe web checkout later is data, not a migration).
 - **Live capture is on-device** — no video leaves the phone. The backend
   recomputes scores from submitted cut times and quarantines optical scans
-  from canonical scores until moderated in asl-admin.
+  from canonical scores until moderated in staccato-admin.
 - **Positioning:** the tool is an instrument. Copy says what it measures,
   never what it does to anyone. Labels, never judgments.
 
@@ -55,12 +55,12 @@ copies of `fixtures/golden_vectors.json`.
 
 ```bash
 # Backend (SQLite + dev auth out of the box)
-cd asl-backend && uv venv --python 3.12 && source .venv/bin/activate
-uv pip install -e '.[dev]' && pytest -m "not slow" && uvicorn asl_backend.main:app
+cd staccato-backend && uv venv --python 3.12 && source .venv/bin/activate
+uv pip install -e '.[dev]' && pytest -m "not slow" && uvicorn staccato_backend.main:app
 
 # Public web + admin
-cd asl-frontend && npm install && npm run dev        # :3000
-cd asl-admin && npm install && npm run dev           # :3100
+cd staccato-frontend && npm install && npm run dev        # :3000
+cd staccato-admin && npm install && npm run dev           # :3100
 
 # iOS: see https://github.com/shawnwelch/staccato-apple (XcodeGen; PacingKit tests run with `swift test`)
 ```
