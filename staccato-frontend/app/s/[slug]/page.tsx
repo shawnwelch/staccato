@@ -19,12 +19,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getShare(slug);
   if (data === NOT_FOUND || data === null) {
-    return { title: "Pacing score" };
+    return { title: "Staccato Score" };
   }
   const title = data.video?.title ?? "Video";
   const score =
     data.analysis.score != null ? formatScore(data.analysis.score) : "pending";
-  const pageTitle = `${title} — pacing score ${score}`;
+  const pageTitle = `${title} — Staccato Score ${score}`;
   const description =
     data.analysis.label != null
       ? `${data.analysis.label} pacing — median shot ${formatSeconds(
@@ -57,7 +57,7 @@ export default async function SharePage({ params }: Props) {
   if (data === null) {
     return (
       <>
-        <h1>Pacing score</h1>
+        <h1>Staccato Score</h1>
         <div className="notice">
           This score is temporarily unavailable &mdash; we couldn&apos;t reach
           the scoring service. Try again in a moment.
@@ -121,8 +121,8 @@ export default async function SharePage({ params }: Props) {
         <div className="scorePanel">
           <ScoreBadge score={analysis.score} label={analysis.label} size="lg" />
           <div className="dim" style={{ maxWidth: "18rem" }}>
-            Pacing intensity, 0&ndash;100. Derived from how often this video
-            changes shots.
+            The Staccato Score: pacing intensity, 0&ndash;100. Derived from how
+            often this video changes shots.
           </div>
         </div>
       </div>

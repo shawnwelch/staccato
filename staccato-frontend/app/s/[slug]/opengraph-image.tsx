@@ -3,7 +3,7 @@ import { getShare, NOT_FOUND, type PacingLabel } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const alt = "Staccato pacing score card";
+export const alt = "Staccato Score card";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -123,7 +123,7 @@ export default async function OgImage({
             color: "#5c6478",
           }}
         >
-          <div style={{ display: "flex" }}>pacing intensity, 0–100</div>
+          <div style={{ display: "flex" }}>Staccato Score — pacing intensity, 0–100</div>
           <div style={{ display: "flex" }}>engine v{engine}</div>
         </div>
       </div>

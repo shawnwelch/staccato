@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Staccato backend",
         version="0.1.0",
-        description="Pacing scorer API — a neutral instrument for video pacing.",
+        description="The Staccato Score API — a neutral 0–100 pacing instrument for video.",
         lifespan=lifespan,
     )
     # Public read endpoints are the growth surface, so dev defaults to "*";

@@ -1,11 +1,11 @@
 # staccato
 
 Monorepo for **Staccato** — a pacing scorer for video: paste a URL
-(or point a phone camera at a screen) and get a 0–100 **pacing intensity
-score** plus a timeline heat map of cut density. A light meter for video
-pacing: it reports what it measures, with neutral labels
-(calm / moderate / fast / hyper-paced), and makes no claims about what pacing
-does to anyone.
+(or point a phone camera at a screen) and get its **Staccato Score** — a
+0–100 pacing intensity rating — plus a timeline heat map of cut density. A
+light meter for video pacing: it reports what it measures, with neutral
+labels (calm / moderate / fast / hyper-paced), and makes no claims about
+what pacing does to anyone.
 
 ## Layout
 
@@ -27,7 +27,7 @@ JSON; S3-compatible via boto3). See `render.yaml`.
 `staccato-backend/staccato_backend/engine/` is a dependency-light module (open-core;
 no imports from app code) with three primitives: `detect_cuts` (PySceneDetect
 ContentDetector), `build_heatmap` (centered rolling window → cuts/min), and
-`pacing_score` — a logistic curve on **median** shot length:
+`pacing_score` — the **Staccato Score**, a logistic curve on **median** shot length:
 `100 / (1 + (median / 11.0) ** 1.3)`. Anchors: 34s → ~19, 11s → 50, 3s → ~84,
 1.5s → ~93. The formula is product surface area: every stored score carries
 `engine_version` (currently **1.0.0**), and scores are never silently

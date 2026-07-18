@@ -30,7 +30,7 @@ _DEFAULT_WINDOW_S = 10.0
 
 
 def pacing_score(median_shot_length_s: float) -> float:
-    """0–100 pacing intensity from the MEDIAN shot length.
+    """The Staccato Score: 0–100 pacing intensity from the MEDIAN shot length.
 
     Logistic in log-space of shot length: score = 100 / (1 + (m / 11) ^ 1.3).
     Anchors: 34s → ~19 (calm), 11s → 50, 3s → ~84, 1.5s → ~93 (hyper-paced).

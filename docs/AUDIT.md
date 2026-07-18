@@ -1,21 +1,13 @@
-# The Staccato Score
+# Security & Efficiency Audit
 
-**A pacing scorer for the codebase itself.** Same philosophy as the product:
-a neutral instrument that reports what it measures, on a 0–100 scale, with
-labels instead of judgments. The labels are tempo markings — because this is
-Staccato.
+("Staccato Score" is the product's video pacing rating — this document
+deliberately doesn't use the name.)
 
-| Band | Marking | Reading |
-|---|---|---|
-| 0–39 | **Largo** | serious structural gaps; do not ship |
-| 40–59 | **Adagio** | works, but known holes carry real risk |
-| 60–79 | **Moderato** | sound core, rough edges |
-| 80–92 | **Allegro** | production-shaped; residual items are roadmap, not risk |
-| 93–100 | **Presto** | hardened and tuned; keep it that way |
-
-The score is a weighted average of seven categories, each scored 0–100
-against the checklist below. Rescore after any security-relevant change —
-and like the engine itself, never silently: record the date and commit.
+A codebase health audit in the product's own spirit: a neutral instrument
+that reports what it measures, on a 0–100 scale. The overall number is a
+weighted average of seven categories, each scored against the checklist
+below. Re-audit after any security-relevant change — and like the engine
+itself, never silently: record the date and commit.
 
 ## Scorecard
 
@@ -30,7 +22,7 @@ and like the engine itself, never silently: record the date and commit.
 | Supply chain & configuration | 10% | 60 | 65 | needs dependency audit + migrations (open) |
 | Efficiency — hot request paths | 15% | 55 | 88 | leaderboard, heat map, JWKS all rewritten |
 | Efficiency — jobs & data layer | 10% | 60 | 82 | N+1s removed, composite indexes added |
-| **Staccato Score** | | **54 · Adagio** | **82 · Allegro** | |
+| **Overall (weighted)** | | **54** | **82** | |
 
 ## What the audit found (and what was fixed)
 
