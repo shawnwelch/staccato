@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     free_analyses_limit: int = 3
     share_base_url: str = "http://localhost:3000"
 
+    # CORS. "*" (dev default) allows any origin; in prod set a comma-separated
+    # allowlist (e.g. the share/frontend origins). Public GET endpoints are
+    # meant to be embedded, but there is no reason to grant browsers
+    # cross-origin access to /admin or write endpoints from arbitrary sites.
+    cors_allow_origins: str = "*"
+
+    # Live capture bounds (defense against oversized optical submissions).
+    live_session_max_duration_s: float = 6.0 * 3600.0
+
     # Channel classification / batch queue throttling
     channel_scan_default_n: int = 20
     batch_queue_throttle_s: float = 0.0  # sleep between batch fetches; raise on 429 storms

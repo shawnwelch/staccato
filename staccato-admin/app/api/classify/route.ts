@@ -24,9 +24,11 @@ export async function POST(req: Request) {
   let nVideos = 20;
   if (body.n_videos !== undefined && body.n_videos !== null && body.n_videos !== "") {
     nVideos = Number(body.n_videos);
-    if (!Number.isInteger(nVideos) || nVideos < 1 || nVideos > 500) {
+    // Backend caps at 100 (ClassifyRequest.n_videos le=100); mirror it here
+    // so the form fails fast instead of bouncing off a backend 422.
+    if (!Number.isInteger(nVideos) || nVideos < 1 || nVideos > 100) {
       return NextResponse.json(
-        { ok: false, error: "n_videos must be an integer between 1 and 500" },
+        { ok: false, error: "n_videos must be an integer between 1 and 100" },
         { status: 400 },
       );
     }

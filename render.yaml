@@ -41,6 +41,10 @@ services:
         sync: false
       - key: STACCATO_YOUTUBE_API_KEY
         sync: false
+      - key: STACCATO_CORS_ALLOW_ORIGINS # comma-separated browser origins (frontend + share domains)
+        sync: false
+      - key: STACCATO_APPLE_ROOT_CA_DIR # pinned Apple root CAs; IAP verification fails closed without them
+        sync: false
 
   - type: worker
     name: staccato-worker

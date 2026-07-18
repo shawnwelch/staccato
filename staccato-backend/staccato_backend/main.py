@@ -32,11 +32,14 @@ def create_app() -> FastAPI:
         description="Pacing scorer API — a neutral instrument for video pacing.",
         lifespan=lifespan,
     )
+    # Public read endpoints are the growth surface, so dev defaults to "*";
+    # prod sets STACCATO_CORS_ALLOW_ORIGINS to an explicit allowlist.
+    origins = [o.strip() for o in settings.cors_allow_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # public read endpoints are the growth surface
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=origins or ["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     from staccato_backend.api import admin, analyses, apple, health, live_sessions, public

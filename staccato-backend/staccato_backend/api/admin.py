@@ -12,7 +12,6 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staccato_backend.auth import require_admin
-from staccato_backend.config import get_settings
 from staccato_backend.db import get_session
 from staccato_backend.engine import ENGINE_VERSION
 from staccato_backend.jobs import QUEUE_BATCH
@@ -260,42 +259,41 @@ async def rescore(body: RescoreRequest, session: AsyncSession = Depends(get_sess
     overwritten — scores are versioned, not silently rescored."""
     if body.from_engine_version == ENGINE_VERSION:
         raise HTTPException(status_code=422, detail="that IS the current engine version")
-    videos = (
+    # One set-based query instead of a per-video lookup: videos whose latest
+    # complete analysis is on the old version AND that have no current-version
+    # analysis (complete or in flight).
+    current = select(Analysis.id).where(
+        Analysis.video_id == Video.id,
+        Analysis.engine_version == ENGINE_VERSION,
+        Analysis.status.in_(
+            [AnalysisStatus.complete, AnalysisStatus.queued, AnalysisStatus.running]
+        ),
+    )
+    to_enqueue = (
         await session.scalars(
             select(Video.id)
             .join(Analysis, Analysis.video_id == Video.id)
             .where(
                 Analysis.status == AnalysisStatus.complete,
                 Analysis.engine_version == body.from_engine_version,
+                ~current.exists(),
             )
             .distinct()
         )
     ).all()
-    to_enqueue = []
-    for video_id in videos:
-        current = await session.scalar(
-            select(Analysis).where(
-                Analysis.video_id == video_id,
-                Analysis.engine_version == ENGINE_VERSION,
-                Analysis.status.in_(
-                    [AnalysisStatus.complete, AnalysisStatus.queued, AnalysisStatus.running]
-                ),
-            )
-        )
-        if current is None:
-            to_enqueue.append(video_id)
     if body.dry_run:
         return {"enqueued": 0, "would_enqueue": len(to_enqueue), "dry_run": True}
-    enqueued = 0
-    for video_id in to_enqueue:
-        analysis = Analysis(
+    analyses = [
+        Analysis(
             video_id=video_id,
             status=AnalysisStatus.queued,
             source=AnalysisSource.url,
             engine_version=ENGINE_VERSION,
         )
-        session.add(analysis)
-        await session.commit()
+        for video_id in to_enqueue
+    ]
+    session.add_all(analyses)
+    await session.commit()
+    for analysis in analyses:
         await analyze_url.configure(queue=QUEUE_BATCH).defer_async(analysis_id=analysis.id)
-        enqueued += 1
-    return {"enqueued": enqueued, "dry_run": False}
+    return {"enqueued": len(analyses), "dry_run": False}

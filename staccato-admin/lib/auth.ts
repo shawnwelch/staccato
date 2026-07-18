@@ -37,6 +37,21 @@ let warned = false;
  *   See README.md "Enabling Clerk".
  */
 export function authMiddleware(_req: NextRequest): NextResponse {
+  // FAIL CLOSED in production. Until Clerk middleware is wired in (see
+  // TODO(clerk) above), nothing gates requests — and this app's server
+  // routes attach ADMIN_API_TOKEN to every backend call. An un-gated
+  // production deploy would be a fully open admin panel, so production
+  // refuses to serve unless explicitly overridden for a break-glass moment.
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ADMIN_ALLOW_UNAUTHENTICATED !== "true"
+  ) {
+    return new NextResponse(
+      "staccato-admin: authentication is not wired in (see lib/auth.ts TODO(clerk)); " +
+        "refusing to serve in production.",
+      { status: 503 },
+    );
+  }
   if (!isAuthConfigured() && !warned) {
     warned = true;
     console.warn(

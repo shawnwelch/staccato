@@ -158,11 +158,18 @@ async def get_leaderboard(
     if category:
         base = base.where(Channel.category == category)
 
-    rows = (await session.execute(base)).all()
-    rows.sort(key=lambda r: r[0].score, reverse=(order == "desc"))
-    total = len(rows)
+    # Sort + paginate in SQL so a big leaderboard doesn't get materialized in
+    # app memory on every request. Channel id breaks score ties deterministically.
+    score_order = ChannelScore.score.desc() if order == "desc" else ChannelScore.score.asc()
+    total = (
+        await session.scalar(select(func.count()).select_from(base.subquery()))
+    ) or 0
     start = (page - 1) * page_size
-    page_rows = rows[start : start + page_size]
+    page_rows = (
+        await session.execute(
+            base.order_by(score_order, Channel.id).limit(page_size).offset(start)
+        )
+    ).all()
 
     categories = [
         c

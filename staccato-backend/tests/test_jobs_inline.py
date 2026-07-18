@@ -14,7 +14,7 @@ pytest.importorskip("cv2")
 import staccato_backend.db as db_module
 import staccato_backend.jobs.tasks as tasks_module
 from staccato_backend.jobs import app as procrastinate_app
-from staccato_backend.models import Channel, ChannelScore
+from staccato_backend.models import ChannelScore
 from staccato_backend.providers import ChannelVideoRef, NormalizedVideo, VideoMetadata
 from tests.utils import write_synthetic_clip
 

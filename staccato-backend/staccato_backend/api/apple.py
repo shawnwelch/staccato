@@ -165,6 +165,30 @@ def _verify_x5c_chain(jws: str, header_b64: str, root_ca_dir: str) -> None:
         raise HTTPException(status_code=400, detail="invalid payload signature") from exc
 
 
+def _check_notification_scope(data: dict, transaction_info: dict) -> None:
+    """Reject notifications that aren't for OUR app in OUR environment.
+
+    Apple signs Server Notifications for every app with the same chain, so
+    chain validation alone accepts a replayed (legitimately signed)
+    notification from any other developer's app — whose appAccountToken that
+    developer controls. Bundle-id and environment checks close that hole.
+    Only enforced when signature verification is on (prod); dev fixtures stay
+    minimal.
+    """
+    settings = get_settings()
+    if not settings.apple_verify_signatures:
+        return
+    for source in (data, transaction_info):
+        bundle_id = source.get("bundleId")
+        if bundle_id is not None and bundle_id != settings.apple_bundle_id:
+            raise HTTPException(status_code=400, detail="notification is for a different app")
+        environment = source.get("environment")
+        if settings.env == "prod" and environment is not None and environment != "Production":
+            raise HTTPException(status_code=400, detail="sandbox notification rejected in prod")
+    if data.get("bundleId") is None:
+        raise HTTPException(status_code=400, detail="notification missing bundleId")
+
+
 @router.post("/notifications", status_code=200)
 async def apple_notifications(
     body: AppleNotification,
@@ -178,6 +202,8 @@ async def apple_notifications(
     signed_transaction = data.get("signedTransactionInfo")
     if signed_transaction:
         transaction_info = _decode_jws_payload(signed_transaction)
+
+    _check_notification_scope(data, transaction_info)
 
     app_account_token = transaction_info.get("appAccountToken")
     original_transaction_id = transaction_info.get("originalTransactionId")

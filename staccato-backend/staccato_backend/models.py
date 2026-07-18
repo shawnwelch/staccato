@@ -11,6 +11,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -163,6 +164,10 @@ class Analysis(Base):
 
     video: Mapped[Video | None] = relationship()
 
+    # Serves the dedupe / latest-per-video lookups (video_id + status +
+    # engine_version) without a second index scan.
+    __table_args__ = (Index("ix_analyses_video_status_engine", "video_id", "status", "engine_version"),)
+
 
 class ChannelScore(Base):
     __tablename__ = "channel_scores"
@@ -178,6 +183,9 @@ class ChannelScore(Base):
     per_video_series_json: Mapped[list] = mapped_column(JSON, default=list)
 
     channel: Mapped[Channel] = relationship()
+
+    # Latest-score-per-channel is the leaderboard's inner query.
+    __table_args__ = (Index("ix_channel_scores_channel_computed", "channel_id", "computed_at"),)
 
 
 class LiveSession(Base):
