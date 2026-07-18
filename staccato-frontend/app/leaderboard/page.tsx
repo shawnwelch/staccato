@@ -68,7 +68,7 @@ export default async function LeaderboardPage({
     <>
       <h1>Channel leaderboard</h1>
       <p className="lede" style={{ fontSize: "1rem" }}>
-        Channels ranked by pacing intensity &mdash; how fast their recent
+        Channels ranked by Staccato Score &mdash; how fast their recent
         videos cut. {order === "desc" ? "Fastest" : "Calmest"} first.{" "}
         <Link href={href({ order: order === "desc" ? "asc" : "desc", page: "1" }, current)}>
           Flip order
@@ -103,7 +103,7 @@ export default async function LeaderboardPage({
               <th>Channel</th>
               <th>Category</th>
               <th className="num">Subs</th>
-              <th className="num">Score</th>
+              <th className="num">Staccato Score</th>
               <th>Pacing</th>
               <th>Trend</th>
               <th className="num">Videos</th>

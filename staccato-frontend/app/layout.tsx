@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s — Staccato",
   },
   description:
-    "Staccato measures how fast a video changes shots: a 0-100 pacing intensity score and a timeline heat map of cut density.",
+    "Staccato measures how fast a video changes shots: the Staccato Score, a 0-100 pacing intensity rating, plus a timeline heat map of cut density.",
 };
 
 export default function RootLayout({

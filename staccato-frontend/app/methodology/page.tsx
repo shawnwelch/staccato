@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Methodology",
   description:
-    "How Staccato measures shot pacing: shot detection, median shot length, a logistic 0-100 scale, and versioned scoring.",
+    "How the Staccato Score measures shot pacing: shot detection, median shot length, a logistic 0-100 scale, and versioned scoring.",
 };
 
 export default function MethodologyPage() {
@@ -15,11 +15,12 @@ export default function MethodologyPage() {
         changes shots &mdash; and reports it on a fixed, versioned scale.
       </p>
 
-      <h2>What the score measures</h2>
+      <h2>What the Staccato Score measures</h2>
       <p>
         The engine detects shot boundaries (cuts) in a video, computes the{" "}
-        <strong>median shot length</strong>, and maps it onto a 0&ndash;100
-        pacing intensity score with a logistic curve. The curve&apos;s midpoint
+        <strong>median shot length</strong>, and maps it onto the{" "}
+        <strong>Staccato Score</strong> &mdash; a 0&ndash;100 pacing intensity
+        rating on a logistic curve. The curve&apos;s midpoint
         is calibrated so that a median shot length of{" "}
         <span className="mono">11 seconds</span> scores{" "}
         <span className="mono">50</span>. Shorter median shots push the score
@@ -28,8 +29,8 @@ export default function MethodologyPage() {
 
       <h2>Labels</h2>
       <p>
-        Labels are descriptive bands on the same scale &mdash; they describe
-        the measurement, nothing else:
+        Labels are descriptive bands on the Staccato Score scale &mdash; they
+        describe the measurement, nothing else:
       </p>
       <div className="tableWrap" style={{ maxWidth: "28rem" }}>
         <table>

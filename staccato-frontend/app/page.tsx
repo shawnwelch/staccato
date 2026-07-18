@@ -21,9 +21,10 @@ export default function HomePage() {
     <>
       <h1>See how fast anything cuts.</h1>
       <p className="lede">
-        Staccato measures a video&apos;s shot pacing: a 0&ndash;100 intensity score
-        from median shot length, plus a timeline heat map of cut density. A
-        neutral instrument &mdash; point it at any video and read the number.
+        Staccato measures a video&apos;s shot pacing: the{" "}
+        <strong>Staccato Score</strong>, a 0&ndash;100 intensity rating from
+        median shot length, plus a timeline heat map of cut density. A neutral
+        instrument &mdash; point it at any video and read the number.
       </p>
 
       <div className="card sampleCard" aria-label="Sample score card">
@@ -69,7 +70,7 @@ export default function HomePage() {
 
       <h2>What the number means</h2>
       <p className="dim" style={{ maxWidth: "42rem" }}>
-        The score maps median shot length onto a 0&ndash;100 scale &mdash; a
+        The Staccato Score maps median shot length onto a 0&ndash;100 scale &mdash; a
         median of 11 seconds sits at 50. Labels are descriptive bands: calm,
         moderate, fast, hyper-paced. Details in the{" "}
         <Link href="/methodology">methodology</Link>.

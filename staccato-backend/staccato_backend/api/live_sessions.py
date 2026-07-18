@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staccato_backend.config import get_settings
 from staccato_backend.db import get_session
 from staccato_backend.deps.entitlements import EntitlementInfo, require_pro
 from staccato_backend.engine.scoring import summarize_cuts
@@ -24,6 +25,11 @@ async def create_live_session(
     math is never trusted for published data. Optical scans stay out of
     canonical title scores until promoted through admin moderation.
     """
+    max_duration = get_settings().live_session_max_duration_s
+    if body.duration_s > max_duration:
+        raise HTTPException(
+            status_code=422, detail=f"duration exceeds the {max_duration:.0f}s capture limit"
+        )
     if any(t < 0 or t > body.duration_s for t in body.cut_times_s):
         raise HTTPException(status_code=422, detail="cut times must lie within [0, duration]")
     try:

@@ -9,6 +9,7 @@ fixtures/golden_vectors.json.
 
 from __future__ import annotations
 
+import bisect
 import math
 import statistics
 from dataclasses import dataclass
@@ -29,7 +30,7 @@ _DEFAULT_WINDOW_S = 10.0
 
 
 def pacing_score(median_shot_length_s: float) -> float:
-    """0–100 pacing intensity from the MEDIAN shot length.
+    """The Staccato Score: 0–100 pacing intensity from the MEDIAN shot length.
 
     Logistic in log-space of shot length: score = 100 / (1 + (m / 11) ^ 1.3).
     Anchors: 34s → ~19 (calm), 11s → 50, 3s → ~84, 1.5s → ~93 (hyper-paced).
@@ -94,7 +95,9 @@ def build_heatmap(
         center = (i + 0.5) * bin_s
         lo = max(0.0, center - half)
         hi = min(duration_s, center + half)
-        count = sum(1 for t in cuts if lo <= t < hi)
+        # Binary search on the sorted cuts; identical count to scanning with
+        # lo <= t < hi, without the O(bins × cuts) blowup on long videos.
+        count = bisect.bisect_left(cuts, hi) - bisect.bisect_left(cuts, lo)
         span = hi - lo
         centers.append(center)
         densities.append((count / span) * 60.0 if span > 0 else 0.0)

@@ -12,7 +12,6 @@ from sqlalchemy import select
 from staccato_backend.config import get_settings
 from staccato_backend.db import get_sessionmaker
 from staccato_backend.engine import ENGINE_VERSION
-from staccato_backend.engine.scoring import summarize_cuts
 from staccato_backend.jobs import QUEUE_BATCH, QUEUE_INTERACTIVE, app
 from staccato_backend.jobs.channel_scoring import trend_bucket, trend_slope, view_weighted_score
 from staccato_backend.models import (
@@ -258,20 +257,33 @@ async def finalize_channel_score(channel_id: str, video_ids: list[str], attempt:
             ).defer_async(channel_id=channel_id, video_ids=video_ids, attempt=attempt + 1)
             return
 
-        series = []
-        for video_id in video_ids:
-            analysis = await session.scalar(
+        # Two queries for the whole batch instead of two per video: latest
+        # complete current-version analysis per video, plus the video rows.
+        analyses = (
+            await session.scalars(
                 select(Analysis)
                 .where(
-                    Analysis.video_id == video_id,
+                    Analysis.video_id.in_(video_ids),
                     Analysis.status == AnalysisStatus.complete,
                     Analysis.engine_version == ENGINE_VERSION,
                 )
                 .order_by(Analysis.completed_at.desc())
             )
+        ).all()
+        latest_by_video: dict[str, Analysis] = {}
+        for a in analyses:
+            if a.video_id not in latest_by_video:
+                latest_by_video[a.video_id] = a
+        videos = {
+            v.id: v
+            for v in (await session.scalars(select(Video).where(Video.id.in_(video_ids)))).all()
+        }
+        series = []
+        for video_id in video_ids:
+            analysis = latest_by_video.get(video_id)
             if analysis is None or analysis.score is None:
                 continue
-            video = await session.get(Video, video_id)
+            video = videos.get(video_id)
             series.append(
                 {
                     "provider_video_id": video.provider_video_id if video else video_id,

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const score = channel.score ? formatScore(channel.score.score) : "—";
   return {
     title: `${channel.title} — channel pacing ${score}`,
-    description: `Shot-pacing profile for ${channel.title}: per-video scores over time, measured by Staccato.`,
+    description: `Shot-pacing profile for ${channel.title}: per-video Staccato Scores over time.`,
   };
 }
 

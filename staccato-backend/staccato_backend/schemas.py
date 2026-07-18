@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -62,9 +62,13 @@ class AnalysisStatusResponse(BaseModel):
 
 
 class LiveSessionCreateRequest(BaseModel):
-    cut_times_s: list[float] = Field(max_length=100_000)
-    duration_s: float = Field(gt=0)
-    device_score: float | None = None
+    # Bounded + finite: heat-map size scales with duration, so an unbounded
+    # duration (or NaN/inf smuggled through JSON floats) is a memory/CPU DoS
+    # vector. The per-deploy duration ceiling is enforced in the endpoint
+    # (settings.live_session_max_duration_s).
+    cut_times_s: list[Annotated[float, Field(allow_inf_nan=False)]] = Field(max_length=100_000)
+    duration_s: float = Field(gt=0, allow_inf_nan=False)
+    device_score: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
     content_label: str = Field(default="unknown", max_length=512)
 
 
